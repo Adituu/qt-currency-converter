@@ -1,17 +1,40 @@
+import logging
+
 from PyQt5 import (
     QtCore,
     QtGui,
     QtWidgets
 )
 
-# UI components
-from . import about_ui
-from . import fonts
+from . import (
+    fonts,
+    about_ui,
+    error_ui
+)
+
+from .. import currencies
+
+from ... import utils
+
+logger = logging.getLogger('main_ui')
+logger.setLevel(logging.DEBUG)
+
+logger_handler = logging.FileHandler('./log/app.main.log')
+logger_handler.setLevel(logging.DEBUG)
+
+logger_format = logging.Formatter('[%(asctime)s] - %(name)s - %(levelname)s - %(message)s')
+logger_handler.setFormatter(logger_format)
+
+logger.addHandler(logger_handler)
 
 
 class UI(about_ui.AboutUI, fonts.Fonts):
     def __init__(self, main_window):
+        # UIs
         about_ui.AboutUI.__init__(self)
+        error_ui.ErrorUI.__init__(self)
+
+        # Fonts
         fonts.Fonts.__init__(self)
 
         # Main window
@@ -43,6 +66,7 @@ class UI(about_ui.AboutUI, fonts.Fonts):
         self.convert_btn.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.convert_btn.setStyleSheet("background-color: rgb(78, 154, 6);")
         self.convert_btn.setText("Convert")
+        self.convert_btn.clicked.connect(self.currency_convert)
 
         # Reset button
         self.reset_btn.setGeometry(QtCore.QRect(250, 320, 131, 31))
@@ -66,13 +90,39 @@ class UI(about_ui.AboutUI, fonts.Fonts):
         self.output_currency.setGeometry(QtCore.QRect(410, 60, 221, 51))
         self.output_currency.setStyleSheet("font: 60 15pt 'Fira Code';")
 
+        currencies = utils.read_currencies()
+
+        currencies_list = [x['ID'] for x in currencies if isinstance(currencies, list)]
+        currencies_list.sort()
+
         # Input currencies list
         self.input_currencies_list.setGeometry(QtCore.QRect(50, 130, 121, 30))
-        self.input_currencies_list.addItems(['RON', 'EUR', 'USD'])
+        self.input_currencies_list.addItems(currencies_list)
 
         # Output currencies list
         self.output_currencies_list.setGeometry(QtCore.QRect(460, 130, 121, 30))
-        self.output_currencies_list.addItems(['RON', 'EUR', 'USD'])
+        self.output_currencies_list.addItems(currencies_list)
 
         # Set central widget
         self.main_window.setCentralWidget(self.main_widget)
+
+    def currency_convert(self):
+        input_currency = self.input_currencies_list.currentText()
+        output_currency = self.output_currencies_list.currentText()
+
+        input_currency_data = self.input_currency.toPlainText()
+
+        exchange_rate = currencies.get_exchange_rate(input_currency, output_currency)
+        if len(exchange_rate) < 1:
+            logger.error('Cannot get exchange rate.')
+            return
+
+        try:
+            amount = float(input_currency_data) * float(exchange_rate)
+        except ValueError:
+            logger.error('Invalid input data.')
+            return
+
+        self.output_currency.setPlainText(f'{amount:,}')
+
+        logger.info(f'Converted {amount} {input_currency} to {output_currency}')

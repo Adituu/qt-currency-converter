@@ -1,20 +1,30 @@
 import csv
+import logging
+
+logger = logging.getLogger('utils')
+logger.setLevel(logging.DEBUG)
+
+logger_handler = logging.FileHandler('./log/app.main.log')
+logger_handler.setLevel(logging.DEBUG)
+
+logger_format = logging.Formatter('[%(asctime)s] - %(name)s - %(levelname)s - %(message)s')
+logger_handler.setFormatter(logger_format)
+
+logger.addHandler(logger_handler)
 
 
-def write_currencies(*args):
-    if len(args) > 2:
-        return None
-
+def read_currencies():
     try:
-        with open('./currencies.csv', 'a') as currencies_file:
-            writer = csv.writer(currencies_file, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow([*args])
+        with open('./currencies.csv', 'r', encoding='utf-8-sig') as csvf:
+            reader = csv.DictReader(csvf, delimiter=';', quoting=csv.QUOTE_NONE)
+            data = [x for x in reader]
     except Exception as e:
-        print(e)
-        return None
+        logger.error(f'Cannot read currencies. ({e})')
+
+        return ('Error', str(e))
     else:
-        return True
+        return data
 
 
 if __name__ == '__main__':
-    write_currencies('USD', 'USD')
+    print(read_currencies())

@@ -1,6 +1,5 @@
 import requests
 import random
-import csv
 import dotenv
 import os
 
@@ -22,15 +21,12 @@ def get_exchange_rate(input_curr='USD', output_curr='RON'):
 
     url = f'https://free.currconv.com/api/v7/convert?q={conversion}&compact=ultra&apiKey={APIKEY}'
 
-    headers = {
-        'User-Agent': random.choice(USER_AGENTS)
-    }
-
     try:
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, headers={
+            'User-Agent': random.choice(USER_AGENTS)
+        })
     except Exception as e:
-        print(e)
-        return ""
+        return ('Error', e)
     finally:
         r.close()
 
@@ -38,43 +34,6 @@ def get_exchange_rate(input_curr='USD', output_curr='RON'):
         return ""
 
     return f'{float(r.json()[conversion]):,}'
-
-
-def get_currencies():
-    url = f'https://free.currconv.com/api/v7/currencies?apiKey={APIKEY}'
-
-    headers = {
-        'User-Agent': random.choice(USER_AGENTS)
-    }
-
-    try:
-        r = requests.get(url, headers=headers)
-    except Exception as e:
-        print(e)
-        return []
-    finally:
-        r.close()
-
-    if r.status_code != 200:
-        return []
-
-    return r.json()['results'].keys(), r.json()['results']
-
-
-def write_currencies(*args):
-    if len(args) < 2:
-        return None
-
-    try:
-        with open('./currencies.csv', 'a') as currencies_file:
-            writer = csv.writer(currencies_file, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            print(*args)
-            writer.writerow([*args])
-    except Exception as e:
-        print(e)
-        return None
-    else:
-        return True
 
 
 if __name__ == '__main__':
